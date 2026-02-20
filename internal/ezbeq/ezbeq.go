@@ -433,7 +433,6 @@ func (c *BeqClient) LoadBeqProfile(m *models.SearchRequest) error {
 	        Entry:  m.EntryID,
     	})
 	}
-	}
 	log.Debugf("sending BEQ payload: %#v", payload)
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
