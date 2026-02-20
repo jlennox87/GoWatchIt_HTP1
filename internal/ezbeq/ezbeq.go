@@ -416,22 +416,20 @@ func (c *BeqClient) LoadBeqProfile(m *models.SearchRequest) error {
 		m.Slots = []int{1}
 	}
 	for _, k := range m.Slots {
-	    // Try to resolve the real slot ID from discovered device info
-	    slotID := strconv.Itoa(k)
-	    for _, device := range c.DeviceInfo {
-	        // k is 1-based index into the slots slice
-	        idx := k - 1
-	        if idx >= 0 && idx < len(device.Slots) {
-	            slotID = device.Slots[idx].ID
-	        }
-    	}
-   		payload.Slots = append(payload.Slots, models.SlotsV2{
-	        ID:     slotID,
-	        Gains:  []float64{m.MVAdjust, m.MVAdjust},
-	        Active: true,
-	        Mutes:  []bool{false, false},
-	        Entry:  m.EntryID,
-    	})
+		slotID := strconv.Itoa(k)
+		for _, device := range c.DeviceInfo {
+			idx := k - 1
+			if idx >= 0 && idx < len(device.Slots) {
+				slotID = device.Slots[idx].ID
+			}
+		}
+		payload.Slots = append(payload.Slots, models.SlotsV2{
+			ID:     slotID,
+			Gains:  []float64{m.MVAdjust, m.MVAdjust},
+			Active: true,
+			Mutes:  []bool{false, false},
+			Entry:  m.EntryID,
+		})
 	}
 	log.Debugf("sending BEQ payload: %#v", payload)
 	jsonPayload, err := json.Marshal(payload)
@@ -441,12 +439,20 @@ func (c *BeqClient) LoadBeqProfile(m *models.SearchRequest) error {
 
 	// write payload to each device
 	for _, v := range m.Devices {
-		endpoint := fmt.Sprintf("/api/2/devices/%s", v)
-		_, err = c.makeReq(endpoint, jsonPayload, http.MethodPatch)
-		if err != nil {
-			log.Debugf("json payload %v", string(jsonPayload))
+		for _, k := range m.Slots {
+			slotID := strconv.Itoa(k)
+			for _, device := range c.DeviceInfo {
+				idx := k - 1
+				if idx >= 0 && idx < len(device.Slots) {
+					slotID = device.Slots[idx].ID
+				}
+			}
+			endpoint := fmt.Sprintf("/api/1/devices/%s/filter/%s", v, slotID)
 			log.Debugf("using endpoint %s", endpoint)
-			return err
+			_, err := c.makeReq(endpoint, nil, http.MethodDelete)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
